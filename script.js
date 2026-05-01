@@ -1,37 +1,52 @@
-// 1. Map Setup (Default view: India)
+// 1. Map Setup
 var map = L.map('map').setView([20.5937, 78.9629], 5);
 
-// 2. Satellite View Tiles (Free from Esri)
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+// 2. Map Tiles load karna
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
-// 3. Search and View Logic
+// 3. Search Function (Fixed Version)
 async function findLocation() {
     const place = document.getElementById('locationInput').value;
-    if (!place) return alert("Please enter a location!");
+    
+    if (!place) {
+        alert("Please enter a location name!");
+        return;
+    }
 
-    // City name ko Coordinates mein badalna (Free API)
-    const geoUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${place}`;
-    const response = await fetch(geoUrl);
-    const data = await response.json();
+    try {
+        // Nominatim API ka use - 'https' hona zaroori hai
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place)}`);
+        const data = await response.json();
 
-    if (data.length > 0) {
-        const lat = data[0].lat;
-        const lon = data[0].lon;
+        if (data && data.length > 0) {
+            const lat = data[0].lat;
+            const lon = data[0].lon;
 
-        // Map ko us jagah par le jana
-        map.setView([lat, lon], 15); 
-        L.marker([lat, lon]).addTo(map).bindPopup(`Live: ${place}`).openPopup();
+            // Map ko smoothly move karna
+            map.flyTo([lat, lon], 14);
 
-        // 4. Live Streaming Hack
-        // Hum YouTube Live Search ko embed karenge jo har city ki live stream dhund lega
-        const videoPanel = document.getElementById('videoContainer');
-        videoPanel.innerHTML = `
-            <iframe src="https://www.youtube.com/embed?listType=search&list=live+webcam+${place}+city+environment" 
-            allow="autoplay; encrypted-media" allowfullscreen></iframe>
-        `;
-    } else {
-        alert("Location nahi mili. Kuch aur try karein!");
+            // Purane markers hatane ke liye (optional)
+            L.marker([lat, lon]).addTo(map)
+                .bindPopup(`Showing Live: ${place}`)
+                .openPopup();
+
+            // Video Update karna
+            const videoPanel = document.getElementById('videoContainer');
+            // YouTube search URL ko thoda clean kiya hai
+            videoPanel.innerHTML = `
+                <iframe 
+                    width="100%" 
+                    height="100%" 
+                    src="https://www.youtube.com/embed?listType=search&list=live+webcam+${encodeURIComponent(place)}" 
+                    allowfullscreen>
+                </iframe>`;
+        } else {
+            alert("Location nahi mili! Kuch aur search karein (e.g. New York).");
+        }
+    } catch (error) {
+        console.error("Error fetching location:", error);
+        alert("Server se connect nahi ho pa raha hai. Internet check karein.");
     }
 }
