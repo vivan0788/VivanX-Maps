@@ -1,25 +1,37 @@
-// Map ko initialize karna (Delhi focus)
-var map = L.map('map').setView([28.6139, 77.2090], 3);
+// 1. Map Setup (Default view: India)
+var map = L.map('map').setView([20.5937, 78.9629], 5);
 
-// Free OpenStreetMap Tiles load karna
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
+// 2. Satellite View Tiles (Free from Esri)
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
 }).addTo(map);
 
-// Example Public Live Camera Data (Duniya bhar ke coordinates)
-const liveCams = [
-    { name: "Times Square, NY", lat: 40.7588, lng: -73.9851, url: "https://www.youtube.com/embed/1-iS7LArMPA?autoplay=1" },
-    { name: "London Bridge", lat: 51.5072, lng: -0.1276, url: "https://www.youtube.com/embed/vOunp6fS8-o?autoplay=1" },
-    { name: "Tokyo City", lat: 35.6895, lng: 139.6917, url: "https://www.youtube.com/embed/nUf_A9vK0eI?autoplay=1" }
-];
+// 3. Search and View Logic
+async function findLocation() {
+    const place = document.getElementById('locationInput').value;
+    if (!place) return alert("Please enter a location!");
 
-// Map par markers lagana
-liveCams.forEach(cam => {
-    var marker = L.marker([cam.lat, cam.lng]).addTo(map);
-    
-    // Jab marker par click ho toh Live Video dikhe
-    marker.bindPopup(`
-        <b>${cam.name}</b><br>
-        <iframe class="live-window" src="${cam.url}" frameborder="0" allowfullscreen></iframe>
-    `);
-});
+    // City name ko Coordinates mein badalna (Free API)
+    const geoUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${place}`;
+    const response = await fetch(geoUrl);
+    const data = await response.json();
+
+    if (data.length > 0) {
+        const lat = data[0].lat;
+        const lon = data[0].lon;
+
+        // Map ko us jagah par le jana
+        map.setView([lat, lon], 15); 
+        L.marker([lat, lon]).addTo(map).bindPopup(`Live: ${place}`).openPopup();
+
+        // 4. Live Streaming Hack
+        // Hum YouTube Live Search ko embed karenge jo har city ki live stream dhund lega
+        const videoPanel = document.getElementById('videoContainer');
+        videoPanel.innerHTML = `
+            <iframe src="https://www.youtube.com/embed?listType=search&list=live+webcam+${place}+city+environment" 
+            allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        `;
+    } else {
+        alert("Location nahi mili. Kuch aur try karein!");
+    }
+}
